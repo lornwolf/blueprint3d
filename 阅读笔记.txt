@@ -1,0 +1,61 @@
+floorplanner
+  用户制作二维平面图的类。
+  floorplanner.js
+    封装了平面作图的逻辑处理（鼠标动作、编辑状态）。
+    里面包含Floorplan（floorplan.js）对象，每次编辑后都随时更新模型数据。
+  floorplanner_view.js
+    封装了绘图的处理。根据floorplanner.js的处理结果在画布上绘图。
+
+items
+  各类物体的三维对象。
+  item.js
+    以下各类的父类。从THREE.Mesh继承。
+  floor_item.js
+    地板。
+  in_wall_floor_item.js
+    在墙面上的物体。
+  in_wall_item.js
+    在墙里面的物体。
+  on_floor_item.js
+    放在地板上的物体。
+  wall_floor_item.js
+    墙面。
+  wall_item.js
+    墙。
+
+model
+  Data model representing both the 2D floorplan and all of the items in it。
+  model.js
+  floorplan.js
+  corner.js
+  half_edge.js
+    代表墙的某一面。
+    其中包含了一个名为plane的THREE.Mesh对象，也即墙面的三维对象。
+    2D的类中包含3D对象让人感觉有些凌乱。
+  room.js
+  wall.js
+    墙。一个墙包含贴/嵌在墙上的物体。
+  scene.js
+    内含THREE.Scene对象和item数组，即场景和场景内的物体。
+
+three
+  对three.js对象的一些封装。
+  three_main.js
+    初始化相机、渲染器等。
+  three_controller.js
+    控制物体的选中、拖拽等。
+  three_controls.js
+    this file is a modified version of THREE.OrbitControls.
+    处理场景的旋转缩放等。
+  three_edge.js
+  three_floor.js
+  three_floorplan.js
+    二维平面图发生变化时，会调用该类的redraw方法重新绘制房间三维图。
+    该类包含了floors[]和edges[]两个数组，用来保存地板和墙（边）对象。
+  three_hud.js
+    控制物体旋转的工具。
+    包含了selectedItem（被选中的物体）和activeObject（旋转用箭头）对象。
+  three_lights.js
+  three_skybox.js
+
+utils
