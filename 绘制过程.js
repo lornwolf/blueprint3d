@@ -7,6 +7,7 @@ var corner = floorplan.newCorner(scope.targetX, scope.targetY);
 floorplan.newWall(scope.lastNode, corner); 
  
 floorplan.js
+
 this.newWall = function(start, end) {
   var wall = new Wall(start, end);
   walls.push(wall)
@@ -33,6 +34,7 @@ this.update = function() {
 }
  
 Room.js
+
 updateWalls();
 updateInteriorCorners();
 generatePlane();
@@ -102,5 +104,3 @@ function generatePlane() {
   // 给地面三维对象增加一个新属性
   scope.floorPlane.room = scope;
 }
-
- 
