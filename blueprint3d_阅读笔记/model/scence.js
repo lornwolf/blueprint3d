@@ -1,7 +1,5 @@
 var THREE = require('three')
-
 var JQUERY = require('jquery');
-
 var FloorItem = require('../items/floor_item');
 var InWallFloorItem = require('../items/in_wall_floor_item');
 var InWallItem = require('../items/in_wall_item');
@@ -9,9 +7,7 @@ var Item = require('../items/item');
 var OnFloorItem = require('../items/on_floor_item');
 var WallFloorItem = require('../items/wall_floor_item');
 var WallItem = require('../items/wall_item');
-
 var utils = require('../utils/utils')
-
 
 var Scene = function(model, textureDir) {
   var scope = this;
