@@ -27,6 +27,7 @@ model
   Data model representing both the 2D floorplan and all of the items in it。
   model.js
   floorplan.js
+    存放了构成房间结构的所有墙、角、房间。
   corner.js
   half_edge.js
     代表墙的某一面。
