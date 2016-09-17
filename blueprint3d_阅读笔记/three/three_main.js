@@ -8,6 +8,12 @@ var ThreeControls = require('./three_controls');
 //var ThreeCanvas = require('./three_canvas')
 var ThreeHUD = require('./three_hud.js')
 
+/**
+ * model   : 包含房间平面图数据和3D场景对象的model对象；
+ * element : 画面右侧的DIV区域;
+ * canvasElement : 
+ * opts    : 空
+ */
 var ThreeMain = function(model, element, canvasElement, opts) {
   var scope = this;
 
@@ -30,6 +36,7 @@ var ThreeMain = function(model, element, canvasElement, opts) {
   var scene = model.scene;
 
   var model = model;
+  // 把Div的DOM对象封装成jQuery对象。
   this.element = JQUERY(element);
   var domElement;
 
@@ -40,8 +47,8 @@ var ThreeMain = function(model, element, canvasElement, opts) {
   var controller;
   var floorplan;
 
-  //var canvas;
-  //var canvasElement = canvasElement;
+  // var canvas;
+  // var canvasElement = canvasElement;
 
   var needsUpdate = false;
 
@@ -62,6 +69,9 @@ var ThreeMain = function(model, element, canvasElement, opts) {
   this.floorClicked = JQUERY.Callbacks(); // floor
   this.nothingClicked = JQUERY.Callbacks();
 
+  /**
+   * 初始化相机、渲染器、控制器、灯光、skybox等。
+   */
   function init() {
     THREE.ImageUtils.crossOrigin = "";
 
