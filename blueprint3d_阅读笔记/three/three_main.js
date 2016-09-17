@@ -108,6 +108,7 @@ var ThreeMain = function(model, element, canvasElement, opts) {
 
     var lights = new ThreeLights(scene, model.floorplan);
 
+    // 创建ThreeFloorplan对象的作用就是给model.floorplan设置了一个room_update回调函数。
     floorplan = new ThreeFloorplan(scene, model.floorplan, scope.controls);
 
     animate();
