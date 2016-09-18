@@ -42,6 +42,7 @@ var ThreeMain = function(model, element, canvasElement, opts) {
 
   var camera;
   var renderer;
+  // var定义的只是函数内部的变量，外界不能访问。this定义的是生成对象的属性，外界可以访问。
   this.controls;
   var canvas;
   var controller;
@@ -92,6 +93,7 @@ var ThreeMain = function(model, element, canvasElement, opts) {
 
     hud = new ThreeHUD(scope);
 
+    // ThreeController对象会处理场景中物体的鼠标选中、拖拽、旋转等事件。
     controller = new ThreeController(scope, model, camera, scope.element, scope.controls, hud);
 
     domElement.appendChild(renderer.domElement);
