@@ -1,6 +1,11 @@
 var JQUERY = require('jquery');
 var utils = require('../utils/utils')
 
+/**
+ * floorplan : model.floorplan对象。
+ * viewmodel : Floorplanner对象。
+ * canvas : 画面上的画布对象ID。
+ */
 var FloorplannerView = function(floorplan, viewmodel, canvas) {
 
   var scope = this;
