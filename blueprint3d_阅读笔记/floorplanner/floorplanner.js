@@ -2,6 +2,10 @@ var $ = require('jquery');
 var FloorplannerView = require('./floorplanner_view')
 var utils = require('../utils/utils')
 
+/**
+ * canvas : 画面上的画布对象ID。
+ * floorplan : model.floorplan对象。
+ */
 var Floorplanner = function(canvas, floorplan) {
   var scope = this;
   var floorplan = floorplan;
@@ -41,7 +45,7 @@ var Floorplanner = function(canvas, floorplan) {
   this.modeResetCallbacks = $.Callbacks();
 
   // 获取画布对象
-  var canvasElement = $("#"+canvas);
+  var canvasElement = $("#" + canvas);
 
   var view = new FloorplannerView(floorplan, this, canvas);
 
@@ -52,6 +56,7 @@ var Floorplanner = function(canvas, floorplan) {
   this.wallWidth = 10.0 * pixelsPerCm;
 
   function init() {
+    // 设置初始默认模式。
     scope.setMode(scope.modes.MOVE);
     // 注册鼠标事件
     canvasElement.mousedown(mousedown);
