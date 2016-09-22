@@ -4,7 +4,7 @@ var utils = require('../utils/utils')
 
 /**
  * canvas : 画面上的画布对象ID。
- * floorplan : model.floorplan对象。
+ * floorplan : model.floorplan对象。为了给它设置回调函数而传过来。
  */
 var Floorplanner = function(canvas, floorplan) {
   var scope = this;
