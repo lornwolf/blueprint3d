@@ -12,7 +12,10 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
   var floorplan = floorplan;
   var viewmodel = viewmodel;
   var canvas = canvas;
+  
+  // 根据ID获取画布对象。
   var canvasElement = document.getElementById(canvas);
+  // getContext() 返回一个用于在画布上绘图的环境。参数指定了想要在画布上绘制的类型。当前唯一的合法值是 "2d"。
   var context = canvasElement.getContext('2d');
 
   // grid parameters
@@ -41,12 +44,14 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
   var cornerColorHover = "#008cba"
 
   function init() {
+    // 设置浏览器窗口大小发生变化时的事件处理函数。
     JQUERY(window).resize(scope.handleWindowResize);
+    // 初始化画布尺寸。
     scope.handleWindowResize();
   }
 
   this.handleWindowResize = function() {
-    var canvasSel = JQUERY("#"+canvas);
+    var canvasSel = JQUERY("#" + canvas);
     var parent = canvasSel.parent();
     canvasSel.height(parent.innerHeight());
     canvasSel.width(parent.innerWidth());
@@ -56,6 +61,7 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
   }
 
   this.draw = function() {
+    // 清空画布。
     context.clearRect(0, 0, canvasElement.width, canvasElement.height);
     drawGrid();
     utils.forEach(floorplan.getRooms(), drawRoom);
@@ -106,6 +112,7 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
     }
   }
 
+  // 厘米转换成英尺。
   function cmToFeet(cm) {
     var realFeet = ((cm*0.393700) / 12);
     var feet = Math.floor(realFeet);
@@ -213,6 +220,10 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
     context.stroke();
   }
 
+  /**
+   * 绘制多边形。
+   * stroke : 是否绘制边框。
+   */
   function drawPolygon(xArr, yArr, fill, fillColor, stroke, strokeColor, strokeWidth) {
     // fillColor is a hex string, i.e. #ff0000
     fill = fill || false;
@@ -235,6 +246,10 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
 
   }
 
+  /**
+   * 绘制圆形。
+   * radius : 半径。
+   */
   function drawCircle(centerX, centerY, radius, fillColor) {
     context.beginPath();
     context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
@@ -251,6 +266,7 @@ var FloorplannerView = function(floorplan, viewmodel, canvas) {
     }
   }
 
+  // 绘制背景网格。
   function drawGrid() {
     var offsetX = calculateGridOffset(-viewmodel.originX);
     var offsetY = calculateGridOffset(-viewmodel.originY);
