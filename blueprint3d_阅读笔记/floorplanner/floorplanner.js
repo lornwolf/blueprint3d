@@ -27,7 +27,7 @@ var Floorplanner = function(canvas, floorplan) {
   // how much will we move a corner to make a wall axis aligned (cm)
   var snapTolerance = 25;
 
-  // these are in threeJS coords
+  // these are in threeJS coords（横纵坐标）
   var mouseX = 0;
   var mouseY = 0;
   var rawMouseX = 0;
@@ -38,9 +38,9 @@ var Floorplanner = function(canvas, floorplan) {
   var lastY = 0;
 
   // drawing state
-  this.targetX = 0;
-  this.targetY = 0;
-  this.lastNode = null;
+  this.targetX = 0;  // 发生鼠标事件时鼠标位置的X轴坐标
+  this.targetY = 0;  // 发生鼠标事件时鼠标位置的Y轴坐标
+  this.lastNode = null;  // 在绘制状态下，最后一次鼠标点击的位置。
 
   this.modeResetCallbacks = $.Callbacks();
 
@@ -130,15 +130,21 @@ var Floorplanner = function(canvas, floorplan) {
     }
 
     // update object target
+    // 非绘图状态，并且鼠标没有被押下的情况下。
     if (scope.mode != scope.modes.DRAW && !mouseDown) {
+      // 判断鼠标是不是停留在角落上。
       var hoverCorner = floorplan.overlappedCorner(mouseX, mouseY);
-      var hoverWall = floorplan.overlappedWall(mouseX, mouseY);      
+      // 判断鼠标是不是停留在墙壁上。
+      var hoverWall = floorplan.overlappedWall(mouseX, mouseY);
+      // 是否需要重绘的标记。
       var draw = false;
+      // 设置当前的“激活角落”。
       if (hoverCorner != scope.activeCorner) {
         scope.activeCorner = hoverCorner;
         draw = true;
       }
       // corner takes precendence
+      // 设置当前的“激活墙”。
       if (scope.activeCorner == null) {
         if (hoverWall != scope.activeWall) {
           scope.activeWall = hoverWall;
@@ -164,7 +170,9 @@ var Floorplanner = function(canvas, floorplan) {
     // dragging
     if (scope.mode == scope.modes.MOVE && mouseDown) {
       if (scope.activeCorner) {
+        // 移动角落（带动墙壁一起移动）
         scope.activeCorner.move(mouseX, mouseY);
+        // 如果与别的角落坐标的x、y轴在一定距离内，则调整自己的坐标与之重合。
         scope.activeCorner.snapToAxis(snapTolerance);
       } else if (scope.activeWall) {
         scope.activeWall.relativeMove(
