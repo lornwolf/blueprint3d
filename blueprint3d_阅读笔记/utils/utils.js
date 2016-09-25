@@ -1,14 +1,14 @@
 var utils = {};
 
+// 计算一个点到一条线段的最近距离。
 utils.pointDistanceFromLine  = function( x, y, x1, y1, x2, y2 ) {
-
   var point = utils.closestPointOnLine(x, y, x1, y1, x2, y2);
-    var dx = x - point.x;
-    var dy = y - point.y;
-    return Math.sqrt(dx * dx + dy * dy);
+  var dx = x - point.x;
+  var dy = y - point.y;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
-// 计算一个点到一条线段的最近距离
+// 计算一个点到一条线段的最近距离，返回线段上最近距离点的坐标。
 utils.closestPointOnLine = function(x, y, x1, y1, x2, y2) {
   // thanks, http://stackoverflow.com/a/6853926
   var A = x - x1;
