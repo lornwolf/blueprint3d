@@ -104,7 +104,6 @@ var Floorplan = function() {
     utils.removeValue(corners, corner);
   }
 
-
   this.getWalls = function() {
     return walls;
   }
@@ -140,8 +139,6 @@ var Floorplan = function() {
     }
     return null;
   }
-
-  // import and export -- cleanup
 
   this.saveFloorplan = function() {
     var floorplan = {
