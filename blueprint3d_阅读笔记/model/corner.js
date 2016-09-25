@@ -1,7 +1,10 @@
 var JQUERY = require('jquery');
 var utils = require('../utils/utils')
 
-// x and y are floats
+/**
+ * floorplan : model.Floorplan对象。
+ * x and y are floats
+ */
 var Corner = function(floorplan, x, y, id) {
   this.id = id || utils.guid();
   var scope = this;
@@ -178,26 +181,33 @@ var Corner = function(floorplan, x, y, id) {
     return this.wallTo(corner) || this.wallFrom(corner);
   }
 
+  /**
+   * corner : 与本角落重叠的其他角落。
+   */
   this.combineWithCorner = function(corner) {
     // update position to other corner's
     this.x = corner.x;
     this.y = corner.y;
     // absorb the other corner's wallStarts and wallEnds
+    // 更新与“重叠角落”相连的所有的墙壁的数据。
     for( var i = corner.wallStarts.length - 1; i >= 0; i-- ) {
       corner.wallStarts[i].setStart( this );
     }
     for( var i = corner.wallEnds.length - 1; i >= 0; i-- ) {
       corner.wallEnds[i].setEnd( this );         
     }           
-    // delete the other corner
+    // 删除“重叠角落”。
     corner.removeAll();
+    // 删除与本角落相连的重叠的墙壁。
     this.removeDuplicateWalls();
     floorplan.update();
   }
 
+  /**
+   * 判断本角落与其他角落或墙壁有没有重叠，有的话执行合并/拆分处理。
+   */
   this.mergeWithIntersected = function() {
-    //console.log('mergeWithIntersected for object: ' + this.type);
-    // check corners
+    // 如果本角落与其他角落重叠，则执行合并。
     for( var i = 0; i < floorplan.getCorners().length; i++ ) {
       obj = floorplan.getCorners()[i];
       if (this.distanceFromCorner(obj) < tolerance && obj != this) {
@@ -205,19 +215,18 @@ var Corner = function(floorplan, x, y, id) {
         return true;
       }
     }
-    // check walls
+    // 如果本角落与某墙壁重叠，则拆分该墙壁。
     for( var i = 0; i < floorplan.getWalls().length; i++ ) {
       obj = floorplan.getWalls()[i];
       if (this.distanceFromWall(obj) < tolerance && !this.isWallConnected( obj )) {
-        // update position to be on wall
+        // 计算出墙壁上与本角落最近距离点的位置。
         var intersection = utils.closestPointOnLine(this.x, this.y, 
           obj.getStart().x, obj.getStart().y, 
           obj.getEnd().x, obj.getEnd().y);
         this.x = intersection.x;
         this.y = intersection.y;
-        // merge this corner into wall by breaking wall into two parts
-        floorplan.newWall(   
-          this, obj.getEnd());
+        // 拆分墙壁。
+        floorplan.newWall(this, obj.getEnd());
         obj.setEnd(this); 
         floorplan.update();
         return true;
