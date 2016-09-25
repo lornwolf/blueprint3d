@@ -3,7 +3,10 @@ var ThreeFloor = require('./three_floor');
 var ThreeEdge = require('./three_edge');
 var utils = require('../utils/utils')
 
-// THREE.Scene, Blueprint.Floorplan
+/**
+ * scene : THREE.Scene对象。
+ * floorplan : model.Floorplan对象。
+ */
 ThreeFloorplan = function(scene, floorplan, controls) {
 
   var scope = this;
