@@ -1,13 +1,21 @@
 var THREE = require('three');
 var utils = require('../utils/utils')
 
-// 构造方法
+/**
+ * model    :
+ * metadata :
+ * geometry :
+ * material :
+ * position :
+ * rotation :
+ * scale    :
+ */
 var Item = function(model, metadata, geometry, material, position, rotation, scale) {
 
-    //this.three = three;
-    //this.model = three.getModel();
-    //this.scene = three.getScene();
-    //this.controller = three.getController();
+    // this.three = three;
+    // this.model = three.getModel();
+    // this.scene = three.getScene();
+    // this.controller = three.getController();
     this.model = model;
     this.scene = model.scene;
 
@@ -23,15 +31,16 @@ var Item = function(model, metadata, geometry, material, position, rotation, sca
     this.metadata = metadata;
     this.resizable = metadata.resizable;
 
+    // 继承THREE.Mesh的属性。
     THREE.Mesh.call(this, geometry, material);
 
     this.castShadow = true;
     this.receiveShadow = false;
 
-    // does this object affect other floor items
+    // 本物体是否影响其它「地板物体」。
     this.obstructFloorMoves = true;
 
-    // 移动物体到指定位置
+    // 移动物体到指定位置。
     if (position) {
         this.position.copy(position);        
         this.position_set = true;
@@ -43,7 +52,6 @@ var Item = function(model, metadata, geometry, material, position, rotation, sca
     this.allowRotate = true;
     this.fixed = false;
 
-    // dragging
     // 鼠标点中的位置与物体原点的偏移
     this.dragOffset = new THREE.Vector3();
 
