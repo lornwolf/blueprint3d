@@ -222,26 +222,34 @@ Item.prototype.customIntersectionPlanes = function() {
 
 // returns the 2d corners of the bounding polygon
 // offset is Vector3 (used for getting corners of object at a new position)
-// 返回一个物体所占面积的四个角的坐标（二维）
+/*
+ * 返回一个物体所占面积的四个角的坐标（二维）。
+ * position : 物体中心点坐标。
+ */
 Item.prototype.getCorners = function(xDim, yDim, position) {
     position = position || this.position;
 
     var halfSize = this.halfSize.clone();
 
+    // 以原点为中心勾勒物体占地面积（Y轴坐标为0，Y轴角度为0）。
     var c1 = new THREE.Vector3(-halfSize.x, 0, -halfSize.z);
     var c2 = new THREE.Vector3(halfSize.x, 0, -halfSize.z);
     var c3 = new THREE.Vector3(halfSize.x, 0, halfSize.z);
     var c4 = new THREE.Vector3(-halfSize.x, 0, halfSize.z);
 
+    // 平移用的矩阵。
     var transform = new THREE.Matrix4();
-    // console.log(this.rotation.y);
-    transform.makeRotationY(this.rotation.y); //  + Math.PI/2)
 
+    // 设置平移矩阵。物体移动时Y轴角度不变。
+    transform.makeRotationY(this.rotation.y);
+
+    // 按物体的Y轴角度移动四个点（平面旋转）。
     c1.applyMatrix4(transform);
     c2.applyMatrix4(transform);
     c3.applyMatrix4(transform);
     c4.applyMatrix4(transform);
 
+    // 移动到物体所在位置。
     c1.add(position);
     c2.add(position);
     c3.add(position);
@@ -282,15 +290,21 @@ Item.prototype.hideError = function() {
     }
 }
 
-// 获得物体大小的一半
+// 获得物体大小的一半。
 Item.prototype.objectHalfSize = function() {
-    var objectBox = new THREE.Box3();
+    // math.Box3 用来在三维空间内创建一个立方体边界对象。它有两个类型为Vector3的属性min和max。
+    var objectBox = new THREE.Bo
+    // 该方法通过获得参数对象的端点重新设置立方体边界的最小/最大坐标值。
     objectBox.setFromObject( this );
+    // 长宽高各除以2。
     return objectBox.max.clone().sub( objectBox.min ).divideScalar( 2 );
 }
 
-// 鼠标经过或拖动时，用来让物体发光的方法
-// color : 颜色；opacity : 不透明性
+/*
+ * 鼠标经过或拖动时，用来让物体发光的方法。
+ * color : 颜色
+ * opacity : 不透明性
+ */
 Item.prototype.createGlow = function( color, opacity, ignoreDepth ) {
     ignoreDepth = ignoreDepth || false
     opacity = opacity || 0.2;
