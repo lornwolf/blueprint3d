@@ -4,6 +4,12 @@ var utils = require('../utils/utils')
 /**
  * model    :
  * metadata :
+ *          {
+ *              itemName : 名字,
+ *              resizable: 是否可调整大小,
+ *              itemType : 类型,
+ *              modelUrl : 模型数据URL
+ *          }
  * geometry :
  * material :
  * position :
