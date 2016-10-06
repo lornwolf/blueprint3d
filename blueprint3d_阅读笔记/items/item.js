@@ -10,8 +10,8 @@ var utils = require('../utils/utils')
  *              itemType : 类型,
  *              modelUrl : 模型数据URL
  *          }
- * geometry :
- * material :
+ * geometry : THREE.Geometry 対象。
+ * material : THREE.Material 対象。
  * position :
  * rotation :
  * scale    :
