@@ -6,15 +6,16 @@
 回调函数的设置是在程序总入口的方法中处理的。
 
 ■ 加载过程
-  example.js中：
+  example.js中
     创建Blueprint3d对象，该对象中包含以下三个变量；
       model : Model
       three : ThreeMain
       floorplanner : Floorplanner
     调用model的loadSerialized()方法加载json事先准备好的数据;
-  model.js中：
+  model.js中
     newRoom方法中
       调用Floorplan类loadFloorplan()根据json中的平面图数据；
+        加载完后会调用ThreeFloorplan的redraw()方法，重新绘制房间的三维图；
       调用Scene类addItem()方法把家具加入场景；
         调用THREE.JSONLoader.load方法加载数据;
-        加载完后自动调用的回调方法中，根据几何物体和材质对象生成物体，加入到场景中。
+        加载完后自动调用的回调方法中，根据几何物体和材质对象生成物体，加入到场景中；
