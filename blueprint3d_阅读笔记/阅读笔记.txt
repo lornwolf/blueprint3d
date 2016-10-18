@@ -4,3 +4,17 @@
 但二维数据发生变化时需要调用三维处理来重新绘制，也就是需要在A中调用B的方法处理。
 为了达到松耦合，并没有在A类中直接调用B类方法，是通过在A中定义一个回调数组，里面存放B类函数指针的方式实现。
 回调函数的设置是在程序总入口的方法中处理的。
+
+■ 加载过程
+  example.js中：
+    创建Blueprint3d对象，该对象中包含以下三个变量；
+      model : Model
+      three : ThreeMain
+      floorplanner : Floorplanner
+    调用model的loadSerialized()方法加载json事先准备好的数据;
+  model.js中：
+    newRoom方法中
+      调用Floorplan类loadFloorplan()根据json中的平面图数据；
+      调用Scene类addItem()方法把家具加入场景；
+        调用THREE.JSONLoader.load方法加载数据;
+        加载完后自动调用的回调方法中，根据几何物体和材质对象生成物体，加入到场景中。
