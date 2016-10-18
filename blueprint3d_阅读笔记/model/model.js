@@ -16,8 +16,6 @@ var Model = function(textureDir) {
   this.roomDeletedCallbacks = JQUERY.Callbacks();
 
   this.loadSerialized = function(data_json) {
-    // TODO: better documentation on serialization format.
-    // TODO: a much better serialization format.
     this.roomLoadingCallbacks.fire();
     data = JSON.parse(data_json)
     scope.newRoom(data.floorplan, data.items);
