@@ -1,518 +1,469 @@
-/**
-This file is a modified version of THREE.OrbitControls
-Contributors:
- * @author qiao / https://github.com/qiao
- * @author mrdoob / http://mrdoob.com
- * @author alteredq / http://alteredqualia.com/
- * @author WestLangley / http://github.com/WestLangley
- * @author erich666 / http://erichaines.com
- */
-
 var JQUERY = require('jquery');
 var THREE = require('three')
+var utils = require('../utils/utils')
 
-var ThreeControls = function (object, domElement) {
+var ThreeController = function(three, model, camera, element, controls, hud) {
+  var scope = this;
+  this.enabled = true;
 
-	this.object = object;
-	this.domElement = (domElement !== undefined) ? domElement : document;
+  var three = three;
+  var model = model;
+  var scene = model.scene;
+  var element = element;
+  var camera = camera;
+  var controls = controls;
+  var hud = hud;
 
-	// Set to false to disable this control
-	this.enabled = true;
+  var plane; // ground plane used for intersection testing
 
-	// "target" sets the location of focus, where the control orbits around
-	// and where it pans with respect to.
-	this.target = new THREE.Vector3();
-	// center is old, deprecated; use "target" instead
-	this.center = this.target;
+  // 鼠标位置
+  var mouse;
+  var intersectedObject;
+  var mouseoverObject;
+  // 被选中的物体
+  var selectedObject;
 
-	// This option actually enables dollying in and out; left as "zoom" for
-	// backwards compatibility
-	this.noZoom = false;
-	this.zoomSpeed = 1.0;
-	// Limits to how far you can dolly in and out
-	this.minDistance = 0;
-	this.maxDistance = 1500; //Infinity;
+  var mouseDown = false;
+  var mouseMoved = false; // has mouse moved since down click
 
-	// Set to true to disable this control
-	this.noRotate = false;
-	this.rotateSpeed = 1.0;
+  var rotateMouseOver = false;
 
-	// Set to true to disable this control
-	this.noPan = false;
-	this.keyPanSpeed = 40.0;	// pixels moved per arrow key push
-
-	// Set to true to automatically rotate around the target
-	this.autoRotate = false;
-	this.autoRotateSpeed = 2.0; // 30 seconds per round when fps is 60
-
-	// How far you can orbit vertically, upper and lower limits.
-	// Range is 0 to Math.PI radians.
-	this.minPolarAngle = 0; // radians
-	this.maxPolarAngle = Math.PI/2; // radians
-
-	// Set to true to disable use of the keys
-	this.noKeys = false;
-	// The four arrow keys
-	this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
-
-	this.cameraMovedCallbacks = JQUERY.Callbacks();
-
-	this.needsUpdate = true;
-
-	// internals
-
-	var scope = this;
-
-	var EPS = 0.000001;
-
-	var rotateStart = new THREE.Vector2();
-	var rotateEnd = new THREE.Vector2();
-	var rotateDelta = new THREE.Vector2();
-
-	var panStart = new THREE.Vector2();
-	var panEnd = new THREE.Vector2();
-	var panDelta = new THREE.Vector2();
-
-	var dollyStart = new THREE.Vector2();
-	var dollyEnd = new THREE.Vector2();
-	var dollyDelta = new THREE.Vector2();
-
-	var phiDelta = 0;
-	var thetaDelta = 0;
-	var scale = 1;
-	var pan = new THREE.Vector3();
-
-	var STATE = { NONE : -1, ROTATE : 0, DOLLY : 1, PAN : 2, TOUCH_ROTATE : 3, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
-	var state = STATE.NONE;
-
-	this.controlsActive = function() {
-		return (state === STATE.NONE);
-	}
-
-  this.setPan = function( vec3 ) {
-      pan = vec3;
+  var states = {
+    UNSELECTED: 0, // no object selected
+    SELECTED: 1, // selected but inactive
+    DRAGGING: 2, // performing an action while mouse depressed
+    ROTATING: 3,  // rotating with mouse down
+    ROTATING_FREE: 4, // rotating with mouse up
+    PANNING: 5
   };
-
-  this.panTo = function(vec3) {
-  	var newTarget = new THREE.Vector3(vec3.x, scope.target.y, vec3.z);
-  	var delta = scope.target.clone().sub(newTarget);
-  	pan.sub(delta);
-  	scope.update();
-  };
-
-	this.rotateLeft = function ( angle ) {
-		if ( angle === undefined ) {
-			angle = getAutoRotationAngle();
-		}
-		thetaDelta -= angle;
-	};
-
-	this.rotateUp = function ( angle ) {
-		if ( angle === undefined ) {
-			angle = getAutoRotationAngle();
-		}
-		phiDelta -= angle;
-	};
-
-	// pass in distance in world space to move left
-	this.panLeft = function ( distance ) {
-
-		var panOffset = new THREE.Vector3();
-		var te = this.object.matrix.elements;
-		// get X column of matrix
-		panOffset.set( te[0], 0, te[2] );
-		panOffset.normalize();
-
-		panOffset.multiplyScalar(-distance);
-		
-		pan.add( panOffset );
-
-	};
-
-	// pass in distance in world space to move up
-	this.panUp = function ( distance ) {
-
-		var panOffset = new THREE.Vector3();
-		var te = this.object.matrix.elements;
-		// get Y column of matrix
-		panOffset.set( te[4], 0, te[6] );
-		panOffset.normalize();
-		panOffset.multiplyScalar(distance);
-		
-		pan.add( panOffset );
-	};
-	
-	// main entry point; pass in Vector2 of change desired in pixel space,
-	// right and down are positive
-	this.pan = function ( delta ) {
-
-		var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-
-		if ( scope.object.fov !== undefined ) {
-
-			// perspective
-			var position = scope.object.position;
-			var offset = position.clone().sub( scope.target );
-			var targetDistance = offset.length();
-
-			// half of the fov is center to top of screen
-			targetDistance *= Math.tan( (scope.object.fov/2) * Math.PI / 180.0 );
-			// we actually don't use screenWidth, since perspective camera is fixed to screen height
-			scope.panLeft( 2 * delta.x * targetDistance / element.clientHeight );
-			scope.panUp( 2 * delta.y * targetDistance / element.clientHeight );
-		} else if ( scope.object.top !== undefined ) {
-
-			// orthographic
-			scope.panLeft( delta.x * (scope.object.right - scope.object.left) / element.clientWidth );
-			scope.panUp( delta.y * (scope.object.top - scope.object.bottom) / element.clientHeight );
-		} else {
-
-			// camera neither orthographic or perspective - warn user
-			console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - pan disabled.' );
-		}
-
-		scope.update()
-	};
-
-	this.panXY = function(x, y) {
-		scope.pan(new THREE.Vector2(x, y));
-	}
-
-	this.dollyIn = function ( dollyScale ) {
-		if ( dollyScale === undefined ) {
-			dollyScale = getZoomScale();
-		}
-
-		scale /= dollyScale;
-	};
-
-	this.dollyOut = function ( dollyScale ) {
-		if ( dollyScale === undefined ) {
-			dollyScale = getZoomScale();
-		}
-
-		scale *= dollyScale;
-	};
-
-	this.update = function () {
-		var position = this.object.position;
-		var offset = position.clone().sub( this.target );
-
-		// angle from z-axis around y-axis
-		var theta = Math.atan2( offset.x, offset.z );
-
-		// angle from y-axis
-		var phi = Math.atan2( Math.sqrt( offset.x * offset.x + offset.z * offset.z ), offset.y );
-
-		if ( this.autoRotate ) {
-			this.rotateLeft( getAutoRotationAngle() );
-		}
-
-		theta += thetaDelta;
-		phi += phiDelta;
-
-		// restrict phi to be between desired limits
-		phi = Math.max( this.minPolarAngle, Math.min( this.maxPolarAngle, phi ) );
-
-		// restrict phi to be betwee EPS and PI-EPS
-		phi = Math.max( EPS, Math.min( Math.PI - EPS, phi ) );
-
-		var radius = offset.length() * scale;
-
-		// restrict radius to be between desired limits
-		radius = Math.max( this.minDistance, Math.min( this.maxDistance, radius ) );
-		
-		// move target to panned location
-		this.target.add( pan );
-
-		offset.x = radius * Math.sin( phi ) * Math.sin( theta );
-		offset.y = radius * Math.cos( phi );
-		offset.z = radius * Math.sin( phi ) * Math.cos( theta );
-
-		position.copy( this.target ).add( offset );
-
-		this.object.lookAt( this.target );
-
-		thetaDelta = 0;
-		phiDelta = 0;
-		scale = 1;
-		pan.set(0,0,0);
-
-		this.cameraMovedCallbacks.fire();
-		this.needsUpdate = true;
-	};
-
-	function getAutoRotationAngle() {
-		return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
-	}
-
-	function getZoomScale() {
-		return Math.pow( 0.95, scope.zoomSpeed );
-	}
-
-	function onMouseDown( event ) {
-
-		if ( scope.enabled === false ) { return; }
-		event.preventDefault();
-
-		if ( event.button === 0 ) {
-			if ( scope.noRotate === true ) { return; }
-
-			state = STATE.ROTATE;
-
-			rotateStart.set( event.clientX, event.clientY );
-
-		} else if ( event.button === 1 ) {
-			if ( scope.noZoom === true ) { return; }
-
-			state = STATE.DOLLY;
-
-			dollyStart.set( event.clientX, event.clientY );
-
-		} else if ( event.button === 2 ) {
-			if ( scope.noPan === true ) { return; }
-
-			state = STATE.PAN;
-
-			panStart.set( event.clientX, event.clientY );
-		}
-
-		// Greggman fix: https://github.com/greggman/three.js/commit/fde9f9917d6d8381f06bf22cdff766029d1761be
-		scope.domElement.addEventListener( 'mousemove', onMouseMove, false );
-		scope.domElement.addEventListener( 'mouseup', onMouseUp, false );
-
-	}
-
-	function onMouseMove( event ) {
-
-		if ( scope.enabled === false ) return;
-
-		event.preventDefault();
-
-		var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-
-		if ( state === STATE.ROTATE ) {
-
-			if ( scope.noRotate === true ) return;
-
-			rotateEnd.set( event.clientX, event.clientY );
-			rotateDelta.subVectors( rotateEnd, rotateStart );
-
-			// rotating across whole screen goes 360 degrees around
-			scope.rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientWidth * scope.rotateSpeed );
-			// rotating up and down along whole screen attempts to go 360, but limited to 180
-			scope.rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed );
-
-			rotateStart.copy( rotateEnd );
-
-		} else if ( state === STATE.DOLLY ) {
-
-			if ( scope.noZoom === true ) return;
-
-			dollyEnd.set( event.clientX, event.clientY );
-			dollyDelta.subVectors( dollyEnd, dollyStart );
-
-			if ( dollyDelta.y > 0 ) {
-
-				scope.dollyIn();
-
-			} else {
-
-				scope.dollyOut();
-
-			}
-
-			dollyStart.copy( dollyEnd );
-
-		} else if ( state === STATE.PAN ) {
-
-			if ( scope.noPan === true ) return;
-
-			panEnd.set( event.clientX, event.clientY );
-			panDelta.subVectors( panEnd, panStart );
-			
-			scope.pan( panDelta );
-
-			panStart.copy( panEnd );
-		}
-
-		// Greggman fix: https://github.com/greggman/three.js/commit/fde9f9917d6d8381f06bf22cdff766029d1761be
-		scope.update();
-	}
-
-	function onMouseUp( /* event */ ) {
-		if ( scope.enabled === false ) return;
-
-		// Greggman fix: https://github.com/greggman/three.js/commit/fde9f9917d6d8381f06bf22cdff766029d1761be
-		scope.domElement.removeEventListener( 'mousemove', onMouseMove, false );
-		scope.domElement.removeEventListener( 'mouseup', onMouseUp, false );
-
-		state = STATE.NONE;
-	}
-
-	function onMouseWheel( event ) {
-		if ( scope.enabled === false || scope.noZoom === true ) return;
-
-		var delta = 0;
-
-		if ( event.wheelDelta ) { // WebKit / Opera / Explorer 9
-			delta = event.wheelDelta;
-		} else if ( event.detail ) { // Firefox
-			delta = - event.detail;
-		}
-
-		if ( delta > 0 ) {
-			scope.dollyOut();
-
-		} else {
-
-			scope.dollyIn();
-		}
-    scope.update();
-	}
-
-	function onKeyDown( event ) {
-
-		if ( scope.enabled === false ) { return; }
-		if ( scope.noKeys === true ) { return; }
-		if ( scope.noPan === true ) { return; }
-	
-		switch ( event.keyCode ) {
-
-			case scope.keys.UP:
-				scope.pan( new THREE.Vector2( 0, scope.keyPanSpeed ) );
-				break;
-			case scope.keys.BOTTOM:
-				scope.pan( new THREE.Vector2( 0, -scope.keyPanSpeed ) );
-				break;
-			case scope.keys.LEFT:
-				scope.pan( new THREE.Vector2( scope.keyPanSpeed, 0 ) );
-				break;
-			case scope.keys.RIGHT:
-				scope.pan( new THREE.Vector2( -scope.keyPanSpeed, 0 ) );
-				break;
-		}
-
-	}
-	
-	function touchstart( event ) {
-
-		if ( scope.enabled === false ) { return; }
-
-		switch ( event.touches.length ) {
-
-			case 1:	// one-fingered touch: rotate
-				if ( scope.noRotate === true ) { return; }
-
-				state = STATE.TOUCH_ROTATE;
-
-				rotateStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
-				break;
-
-			case 2:	// two-fingered touch: dolly
-				if ( scope.noZoom === true ) { return; }
-
-				state = STATE.TOUCH_DOLLY;
-
-				var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
-				var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
-				var distance = Math.sqrt( dx * dx + dy * dy );
-				dollyStart.set( 0, distance );
-				break;
-
-			case 3: // three-fingered touch: pan
-				if ( scope.noPan === true ) { return; }
-
-				state = STATE.TOUCH_PAN;
-
-				panStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
-				break;
-
-			default:
-				state = STATE.NONE;
-
-		}
-	}
-
-	function touchmove( event ) {
-
-		if ( scope.enabled === false ) { return; }
-
-		event.preventDefault();
-		event.stopPropagation();
-
-		var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-
-		switch ( event.touches.length ) {
-
-			case 1: // one-fingered touch: rotate
-				if ( scope.noRotate === true ) { return; }
-				if ( state !== STATE.TOUCH_ROTATE ) { return; }
-
-				rotateEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
-				rotateDelta.subVectors( rotateEnd, rotateStart );
-
-				// rotating across whole screen goes 360 degrees around
-				scope.rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientWidth * scope.rotateSpeed );
-				// rotating up and down along whole screen attempts to go 360, but limited to 180
-				scope.rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed );
-
-				rotateStart.copy( rotateEnd );
-				break;
-
-			case 2: // two-fingered touch: dolly
-				if ( scope.noZoom === true ) { return; }
-				if ( state !== STATE.TOUCH_DOLLY ) { return; }
-
-				var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
-				var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
-				var distance = Math.sqrt( dx * dx + dy * dy );
-
-				dollyEnd.set( 0, distance );
-				dollyDelta.subVectors( dollyEnd, dollyStart );
-
-				if ( dollyDelta.y > 0 ) {
-					scope.dollyOut();
-				} else {
-					scope.dollyIn();
-				}
-
-				dollyStart.copy( dollyEnd );
-				break;
-
-			case 3: // three-fingered touch: pan
-				if ( scope.noPan === true ) { return; }
-				if ( state !== STATE.TOUCH_PAN ) { return; }
-
-				panEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
-				panDelta.subVectors( panEnd, panStart );
-				
-				scope.pan( panDelta );
-
-				panStart.copy( panEnd );
-				break;
-
-			default:
-				state = STATE.NONE;
-		}
-	}
-
-	function touchend( /* event */ ) {
-		if ( scope.enabled === false ) { 
-			return; 
-		}
-		state = STATE.NONE;
-	}
-
-	this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
-	this.domElement.addEventListener( 'mousedown', onMouseDown, false );
-	this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
-	this.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
-	this.domElement.addEventListener( 'touchstart', touchstart, false );
-	this.domElement.addEventListener( 'touchend', touchend, false );
-	this.domElement.addEventListener( 'touchmove', touchmove, false );
-
-	window.addEventListener( 'keydown', onKeyDown, false );
-};
-
-module.exports = ThreeControls;
+  var state = states.UNSELECTED;
+
+  this.needsUpdate = true;
+
+  function init() {
+    element.mousedown( mouseDownEvent );
+    element.mouseup( mouseUpEvent );
+    element.mousemove( mouseMoveEvent );
+
+    mouse = new THREE.Vector2();
+
+    scene.itemRemovedCallbacks.add(itemRemoved);
+    scene.itemLoadedCallbacks.add(itemLoaded);
+    setGroundPlane();
+  }
+
+  // invoked via callback when item is loaded
+  function itemLoaded(item) {
+    if (!item.position_set) {
+        scope.setSelectedObject(item);
+        switchState(states.DRAGGING);  
+        var pos = item.position.clone();
+        pos.y = 0;   
+        var vec = three.projectVector(pos); 
+        clickPressed(vec); 
+    }
+    item.position_set = true;
+  }
+
+  // 该方法会初始化被选中物体的“偏移”变量。即鼠标点中位置与物体原点的偏移量。
+  function clickPressed(vec2) {
+    vec2 = vec2 || mouse;
+    var intersection = scope.itemIntersection(mouse, selectedObject);
+    if (intersection) {
+      selectedObject.clickPressed(intersection);
+    }
+  }
+
+  function clickDragged(vec2) {
+    vec2 = vec2 || mouse;
+    // 获取相交点的信息
+    var intersection = scope.itemIntersection(mouse, selectedObject);
+    if (intersection) {
+      if (scope.isRotating()) {
+        // 调用物体本身的方法进行旋转处理
+        selectedObject.rotate(intersection);        
+      } else {
+        // 调用物体本身的方法处理拖拽事件
+        selectedObject.clickDragged(intersection);                
+      }
+    }
+  }
+
+  function itemRemoved(item) {
+    // invoked as a callback to event in Scene
+    if (item === selectedObject) {
+      selectedObject.setUnselected();
+      selectedObject.mouseOff();  
+      scope.setSelectedObject(null);  
+    }
+  }
+
+  function setGroundPlane() {
+    // ground plane used to find intersections
+    var size = 10000;
+    plane = new THREE.Mesh( 
+      new THREE.PlaneGeometry(size, size), 
+      new THREE.MeshBasicMaterial());
+    plane.rotation.x = -Math.PI/2;
+    plane.visible = false;
+    scene.add(plane);
+  }
+
+  function checkWallsAndFloors(event) {
+    // double click on a wall or floor brings up texture change modal
+    if (state == states.UNSELECTED && mouseoverObject == null) {
+      // check walls
+      var wallEdgePlanes = model.floorplan.wallEdgePlanes();
+      var wallIntersects = scope.getIntersections(mouse, wallEdgePlanes, true);
+      if (wallIntersects.length > 0) {
+        var wall = wallIntersects[0].object.edge;
+        three.wallClicked.fire(wall);
+        return;
+      } 
+
+      // check floors
+      var floorPlanes = model.floorplan.floorPlanes();
+      var floorIntersects = scope.getIntersections(
+          mouse, floorPlanes, false);
+      if (floorIntersects.length > 0) {
+        var room = floorIntersects[0].object.room;
+        three.floorClicked.fire(room);
+        return;
+      }
+      three.nothingClicked.fire();
+    }
+  }
+
+  // 鼠标移动事件处理
+  function mouseMoveEvent(event) {
+    if (scope.enabled) {
+      event.preventDefault();
+      mouseMoved = true;
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+
+      if (!mouseDown) {
+        updateIntersections();        
+      }
+
+      switch(state) {
+        case states.UNSELECTED:
+          updateMouseover();
+          break;
+        case states.SELECTED:
+          updateMouseover();
+          break;
+        case states.DRAGGING:
+        case states.ROTATING:
+        case states.ROTATING_FREE:
+          clickDragged();
+          hud.update();
+          scope.needsUpdate = true;
+          break;
+      }      
+    }
+  }
+
+  this.isRotating = function() {
+    return (state == states.ROTATING || state == states.ROTATING_FREE);
+  }
+
+  // 鼠标左键压下事件处理
+  function mouseDownEvent( event ) {
+    if (scope.enabled) {
+      event.preventDefault();
+
+      mouseMoved = false;
+      mouseDown = true;
+
+      switch(state) {
+        // 如果有选中物体
+        case states.SELECTED:
+          if (rotateMouseOver) {
+            switchState(states.ROTATING);
+          } else if (intersectedObject != null) {
+            scope.setSelectedObject(intersectedObject);
+            if (!intersectedObject.fixed) {
+              switchState(states.DRAGGING);              
+            }
+          }
+          break;
+        // 如果没有选中物体
+        case states.UNSELECTED:
+          // 如果有相交的物体，则保存该物体到全局变量（intersectedObject），并设置当前状态为“拖拽”。
+          if (intersectedObject != null) {
+            scope.setSelectedObject(intersectedObject);
+            if (!intersectedObject.fixed) {
+              switchState(states.DRAGGING);
+            }
+          } 
+          break;
+        case states.DRAGGING:
+        case states.ROTATING:
+          break;
+        case states.ROTATING_FREE:
+            switchState(states.SELECTED);
+          break;
+      }
+    }
+  }
+
+  function mouseUpEvent( event ) {
+    if (scope.enabled) {
+      mouseDown = false;
+
+      switch(state) {
+        case states.DRAGGING:
+          selectedObject.clickReleased();
+          switchState(states.SELECTED);
+          break;
+        case states.ROTATING:
+          if (!mouseMoved) {
+            switchState(states.ROTATING_FREE);
+          } else {
+            switchState(states.SELECTED);
+          }
+          break;
+        case states.UNSELECTED:
+          if (!mouseMoved) {
+            checkWallsAndFloors();
+          }
+          break;
+        case states.SELECTED:
+          if (intersectedObject == null && !mouseMoved) {
+            switchState(states.UNSELECTED);
+            checkWallsAndFloors();
+          }
+          break;
+        case states.ROTATING_FREE:
+          break;
+      }
+    }
+  }
+
+  // 切换当前状态
+  function switchState( newState ) {
+    if (newState != state) {
+      onExit(state);
+      onEntry(newState);
+    }
+    state = newState;
+    hud.setRotating(scope.isRotating());
+  }
+
+  // 进入一个新状态时的动作
+  function onEntry(state) {
+    switch(state) {
+      case states.UNSELECTED:
+        scope.setSelectedObject( null );
+      case states.SELECTED:
+        controls.enabled = true;
+        break;
+      case states.ROTATING:
+      case states.ROTATING_FREE:
+        controls.enabled = false;
+        break;
+      case states.DRAGGING:
+        three.setCursorStyle("move");
+        clickPressed();
+        // 让场景旋转控制暂停
+        controls.enabled = false;
+        break;
+    }
+  }
+
+  // 退出一个状态时的动作
+  function onExit(state) {
+    switch(state) {
+      case states.UNSELECTED:
+      case states.SELECTED:
+        break;
+      case states.DRAGGING:
+        if (mouseoverObject) {
+          three.setCursorStyle("pointer");
+        } else {
+          three.setCursorStyle("auto");
+        }
+        break;
+      case states.ROTATING:
+      case states.ROTATING_FREE:
+        break;
+    }
+  }
+
+  this.selectedObject = function() {
+    return selectedObject;
+  }
+
+  // updates the vector of the intersection with the plane of a given
+  // mouse position, and the intersected object
+  // both may be set to null if no intersection found
+  function updateIntersections() {
+
+    // check the rotate arrow
+    var hudObject = hud.getObject();
+    if (hudObject != null) {
+      var hudIntersects = scope.getIntersections(
+        mouse,
+        hudObject,
+        false, false, true);
+      if (hudIntersects.length > 0) {
+        rotateMouseOver = true;
+        hud.setMouseover(true);
+        intersectedObject = null;
+        return;
+      } 
+    }
+    rotateMouseOver = false;
+    hud.setMouseover(false);
+
+    // check objects
+    var items = model.scene.getItems();
+    /*items = utils.removeIf(items, function(item) {
+      var remove = item.fixed && !three.options().canMoveFixedItems;
+      //alert("remove!");
+      return remove;
+    });*/
+    var intersects = scope.getIntersections(
+      mouse, 
+      items,
+      false, true);
+
+    if (intersects.length > 0) {
+      intersectedObject = intersects[0].object;
+    } else {
+      intersectedObject = null;
+    }
+  }
+
+  // sets coords to -1 to 1
+  function normalizeVector2(vec2) {
+     var retVec = new THREE.Vector2();
+     retVec.x = ((vec2.x - three.widthMargin) / (window.innerWidth - three.widthMargin)) * 2 - 1;
+     retVec.y = -((vec2.y - three.heightMargin) / (window.innerHeight - three.heightMargin)) * 2 + 1;
+     return retVec;
+  }
+
+  //
+  function mouseToVec3(vec2) {
+    normVec2 = normalizeVector2(vec2)
+    var vector = new THREE.Vector3(
+      normVec2.x, normVec2.y, 0.5);
+    vector.unproject(camera);
+    return vector;
+  }
+
+  // returns the first intersection object
+  this.itemIntersection = function(vec2, item) {
+    // 获取用于判断光线相交的所有Plane对象
+    var customIntersections = item.customIntersectionPlanes();
+    var intersections = null;
+    if (customIntersections && customIntersections.length > 0) {
+      intersections = this.getIntersections(vec2, customIntersections, true);
+    } else {
+      // 获取鼠标实际位置信息（plane是为了获取光线相交信息而制作的一个地平面）
+      intersections = this.getIntersections(vec2, plane);
+    }
+    if (intersections.length > 0) {
+        return intersections[0];
+    } else {
+        return null;
+    }
+  }
+
+  // filter by normals will only return objects facing the camera
+  // objects can be an array of objects or a single object
+  // 只返回面向相机的物体（通过用法线过滤）
+  // 可能返回一个或多个（数组）物体
+  this.getIntersections = function(vec2, objects, filterByNormals, onlyVisible, recursive, linePrecision ) {
+    var vector = mouseToVec3(vec2);
+
+    onlyVisible = onlyVisible || false;
+    // 是否按法线过滤
+    filterByNormals = filterByNormals || false;
+    // 是否递归
+    recursive = recursive || false;
+    // 光线的精度
+    linePrecision = linePrecision || 20;
+
+    // 生成一条光线
+    var direction = vector.sub( camera.position ).normalize();
+    var raycaster = new THREE.Raycaster(
+        camera.position,
+        direction);
+    raycaster.linePrecision = linePrecision;
+
+    var intersections;
+    // 与参数指定的物体（们）相交
+    if (objects instanceof Array){
+      intersections = raycaster.intersectObjects(objects, recursive);
+    } else {
+      intersections = raycaster.intersectObject(objects, recursive);
+    }
+
+    // filter by visible, if true
+    if (onlyVisible) {
+      intersections = utils.removeIf(intersections, function(intersection) {
+        return !intersection.object.visible;
+      });
+    }
+
+    // filter by normals, if true
+    if (filterByNormals) {
+      intersections = utils.removeIf(intersections, function(intersection) {
+        var dot = intersection.face.normal.dot(direction);
+        return (dot > 0)
+      });
+    }
+    return intersections;
+  }
+
+  // manage the selected object
+  this.setSelectedObject = function( object ) {
+    if (state === states.UNSELECTED) {
+      switchState(states.SELECTED);
+    }
+    if ( selectedObject != null ) {
+      selectedObject.setUnselected();
+    }
+    if ( object != null ) {
+      selectedObject = object;
+      selectedObject.setSelected();
+      three.itemSelectedCallbacks.fire(object);
+    } else {
+      selectedObject = null;
+      three.itemUnselectedCallbacks.fire();
+    }
+    this.needsUpdate = true;
+  }
+
+  // TODO: there MUST be simpler logic for expressing this
+  function updateMouseover() {
+    if ( intersectedObject != null ) {
+      if ( mouseoverObject != null ) {
+        if ( mouseoverObject !== intersectedObject ) {
+          mouseoverObject.mouseOff();
+          mouseoverObject = intersectedObject;
+          mouseoverObject.mouseOver();
+          scope.needsUpdate = true;
+        } else {
+          // do nothing, mouseover already set
+        }
+      } else {
+        mouseoverObject = intersectedObject;
+        mouseoverObject.mouseOver();
+        three.setCursorStyle("pointer");
+        scope.needsUpdate = true;
+      }
+    } else if (mouseoverObject != null) {
+      mouseoverObject.mouseOff();
+      three.setCursorStyle("auto");
+      mouseoverObject = null;
+      scope.needsUpdate = true;
+    }
+  }
+
+  init();
+}
+
+module.exports = ThreeController;
